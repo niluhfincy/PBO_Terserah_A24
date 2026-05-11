@@ -1,0 +1,135 @@
+# ============================================================
+# JAWABAN LANGKAH 1 - Tulis identifikasi pelanggaran SOLID
+# ============================================================
+
+# a) Prinsip yang dilanggar:
+#    1. SRP (Single Responsibility Principle)
+#       → karena satu kelas memiliki banyak tanggung jawab:
+#         menyimpan nilai, menghitung IPK, mengirim notifikasi,
+#         dan mencetak laporan.
+
+#    2. OCP (Open Closed Principle)
+#       → karena jika ingin menambah channel notifikasi baru
+#         seperti Telegram atau menambah format laporan baru,
+#         harus mengubah method yang sudah ada.
+
+#    3. DIP (Dependency Inversion Principle)
+#       → karena SistemNilaiKampus langsung menangani detail
+#         implementasi notifikasi tanpa menggunakan abstraksi/interface.
+
+
+# ============================================================
+# JAWABAN LANGKAH 2 - Tulis kode refactor di sini
+# ============================================================
+
+from abc import ABC, abstractmethod
+
+# --- Kelas untuk menyimpan data nilai ---
+class RepoNilai:
+
+    def __init__(self):
+        self.data_nilai = {}
+
+    def simpan(self, nim, matkul, nilai):
+        if nim not in self.data_nilai:
+            self.data_nilai[nim] = {}
+
+        self.data_nilai[nim][matkul] = nilai
+
+    def ambil(self, nim):
+        return self.data_nilai.get(nim, {})
+
+
+# --- Kelas untuk menghitung IPK ---
+class HitungIPK:
+
+    def dari_nilai(self, data_nilai):
+        nilai_list = list(data_nilai.values())
+
+        if not nilai_list:
+            return 0.0
+
+        return sum(nilai_list) / len(nilai_list) / 25
+
+
+# --- Abstraksi notifikasi ---
+class Notifikasi(ABC):
+
+    @abstractmethod
+    def kirim(self, nim, pesan):
+        pass
+
+
+# --- Implementasi Email ---
+class NotifikasiEmail(Notifikasi):
+
+    def kirim(self, nim, pesan):
+        print(f"[Email] Ke {nim}@student.unmul.ac.id : {pesan}")
+        return True
+
+
+# --- Implementasi SMS ---
+class NotifikasiSMS(Notifikasi):
+
+    def kirim(self, nim, pesan):
+        print(f"[SMS] Ke 0812-xxxx ({nim}) : {pesan}")
+        return True
+
+
+# ============================================================
+# VERIFIKASI - Jalankan file ini, semua baris harus [OK]
+# ============================================================
+print("=" * 50)
+print("VERIFIKASI AKTIVITAS KELAS - SOLID")
+print("=" * 50)
+
+# Cek 1: Ada kelas terpisah untuk menyimpan/mengambil nilai
+try:
+    repo = RepoNilai()
+    repo.simpan("2301001", "RPL", 85)
+    repo.simpan("2301001", "PBO", 90)
+    nilai = repo.ambil("2301001")
+    assert isinstance(nilai, dict)
+    assert nilai.get("RPL") == 85
+    print("[OK] RepoNilai: simpan dan ambil nilai berfungsi")
+except NameError:
+    print("[--] RepoNilai belum dibuat")
+except Exception as e:
+    print(f"[X]  RepoNilai: {e}")
+
+# Cek 2: Ada kelas terpisah untuk hitung IPK
+try:
+    hitung = HitungIPK()
+    ipk = hitung.dari_nilai({"RPL": 85, "PBO": 90})
+    assert 3.4 <= ipk <= 3.6, f"IPK tidak sesuai: {ipk}"
+    print("[OK] HitungIPK: perhitungan IPK berfungsi")
+except NameError:
+    print("[--] HitungIPK belum dibuat")
+except Exception as e:
+    print(f"[X]  HitungIPK: {e}")
+
+# Cek 3: Ada kelas terpisah untuk notifikasi (minimal 1 channel)
+try:
+    notif = NotifikasiEmail()
+    hasil = notif.kirim("2301001", "Nilai sudah keluar")
+    assert hasil is True
+    print("[OK] NotifikasiEmail: pengiriman notifikasi berfungsi")
+except NameError:
+    print("[--] NotifikasiEmail belum dibuat")
+except Exception as e:
+    print(f"[X]  NotifikasiEmail: {e}")
+
+# Cek 4: Menambah channel notifikasi BARU tidak mengubah kelas lama
+try:
+    # Jika OCP diterapkan, kelas baru ini bisa dibuat tanpa ubah yang lama
+    notif2 = NotifikasiSMS()
+    hasil2 = notif2.kirim("2301001", "Nilai sudah keluar")
+    assert hasil2 is True
+    print("[OK] NotifikasiSMS: channel baru bisa ditambah tanpa ubah kelas lama")
+except NameError:
+    print("[--] NotifikasiSMS belum dibuat (bonus)")
+except Exception as e:
+    print(f"[X]  NotifikasiSMS: {e}")
+
+print("=" * 50)
+print("Selesai! Diskusikan hasilnya bersama kelompok.")
